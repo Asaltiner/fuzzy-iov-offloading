@@ -50,24 +50,16 @@ python -m src.fuzzy.fis          # FIS'i örnek girdilerle çalıştır, kuralla
 python -m src.fuzzy.plot_fis     # MF ve kontrol yüzeyi grafiklerini üret
 python -m pytest -q              # testler (scikit-fuzzy ile doğrulama dahil)
 ```
-_Simülasyon ve deney komutları sonraki günlerde eklenecek._
 
 ## Reproduction Experiments
-_Gün 3_ — Ortalama gecikme ve görev tamamlama oranının yoğunluğa göre değişimi (Şek. 9, 11); tamamlama oranının hıza göre değişimi (Şek. 12).
+Referans makaledeki şu deneyler yeniden üretilecektir: ortalama gecikme ve görev tamamlama oranının araç yoğunluğuna göre değişimi (Şek. 9, 11), tamamlama oranının araç hızına göre değişimi (Şek. 12).
 
 ## Proposed Extension
-_Gün 3–4_ — Üyelik fonksiyonlarının Genetik Algoritma ile optimizasyonu (GA-FIS), gürültü/robustness analizi, durulaştırma ablation'ı.
-
-## Experimental Results
-_Gün 4_
-
-## Limitations
-_Gün 5_
+Üyelik fonksiyonlarının Genetik Algoritma ile optimizasyonu (GA-FIS), gürültü/robustness analizi ve durulaştırma ablation'ı.
 
 ## Repository Structure
 ```
 src/fuzzy/            Bulanık çıkarım sistemi (fis.py) ve grafikler
-src/sim/              Araç ağı simülatörü (Gün 2)
 experiments/          baseline/ ve proposed/ deney betikleri
 results/figures|tables  Üretilen grafikler ve CSV sonuçlar
 docs/                 Makale analizi, literatür ve uygulama planı

@@ -4,7 +4,7 @@
 - **Python ≥ 3.10.** Kütüphaneler: NumPy, SciPy, pandas, Matplotlib, scikit-fuzzy (yalnızca doğrulama için), Streamlit (canlı demo).
 - **Tekrar üretilebilirlik:** her koşu bir `seed` ile başlatılır. Sonuçlar `results/tables/*.csv` dosyalarına yazılır, grafikler bu CSV'lerden üretilir.
 
-## 2. Simülatör tasarımı (Gün 2)
+## 2. Simülatör tasarımı
 Simülatör ayrık zamanlıdır (adım Δt = 0,1 s).
 
 | Bileşen | Modelleme | Kaynak |
@@ -20,7 +20,7 @@ Simülatör ayrık zamanlıdır (adım Δt = 0,1 s).
 
 **Not:** 350 araç/km × 3 km × çift yön ≈ 2000 araç eder. Hesap süresini makul tutmak için yoğunluk değerleri korunacak, gerekirse segment kısaltılacak.
 
-## 3. Bulanık sistem (Gün 1, tamamlandı → `src/fuzzy/fis.py`)
+## 3. Bulanık sistem (`src/fuzzy/fis.py`)
 
 | Değişken | Evren | Terimler | MF tipi |
 |---|---|---|---|
@@ -41,7 +41,7 @@ Simülatör ayrık zamanlıdır (adım Δt = 0,1 s).
 - **Doğrulama:** Kendi NumPy uygulamamız, aynı kurallarla kurulan scikit-fuzzy sistemiyle 25 rastgele girdide 0,5 puandan küçük farkla aynı sonucu veriyor. Ayrıca monotonluk ve çıktı aralığı testleri var (`tests/test_fis.py`).
 - **Edge seçimi skoru (Denk. 5–9):** com_score = Σ w_x·MF_x. Önem skorları (I_x) varsayılan olarak eşit; duyarlılık analizi ek deney olarak yapılacak.
 
-## 4. Baseline yöntemler (Gün 2)
+## 4. Baseline yöntemler
 | Kod | Yöntem | Kuyruk disiplini |
 |---|---|---|
 | LPA | Görev yerelde işlenir | FIFO |
@@ -50,7 +50,7 @@ Simülatör ayrık zamanlıdır (adım Δt = 0,1 s).
 | NF | Araçlar MIPS'e göre sıralanır, kapasitesi uygun ilk araç seçilir | FIFO |
 | **FUZZY (referans)** | Beacon tabanlı edge seçimi + bulanık öncelik kuyruğu | Bulanık skor |
 
-## 5. Yeniden üretim deneyleri (Gün 3)
+## 5. Yeniden üretim deneyleri
 - **E1:** yoğunluk ∈ {50, 100, 150, 200, 250, 300, 350} araç/km → ortalama gecikme (Şek. 9) ve tamamlama oranı (Şek. 11)
 - **E2:** ortalama hız ∈ {10, 20, 30, 40, 50} m/s → tamamlama oranı (Şek. 12)
 - Her nokta için 30 tekrar (makalede 50; süre kısıtı nedeniyle 30). Sonuçlar ortalama ± %95 güven aralığı olarak verilecek.

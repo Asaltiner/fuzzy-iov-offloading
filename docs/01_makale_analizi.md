@@ -92,7 +92,7 @@
 - Üyelik fonksiyonlarını ve kural setlerini GA veya DRL ile otomatik ayarlamak. **Bizim özgün katkımızın gerekçesi bu öneri.**
 
 ## 6. Projedeki kapsam (MRR)
-Veins/OMNeT++ ortamı 5 günlük takvime sığmıyor. Bu yüzden şunu yapacağız:
+Veins/OMNeT++ ortamının kurulumu ve kalibrasyonu proje kapsamını aşıyor. Bu yüzden şunu yapacağız:
 - Python'da tohum kontrollü, sadeleştirilmiş bir ayrık zamanlı simülatör yazacağız. İçinde araç hareketi, 250 m V2V menzili, Nakagami-m bağlantı başarısı, beacon tabanlı edge seçimi ve EN kuyruğunda bulanık önceliklendirme olacak.
 - Dört baseline uygulanacak: LPA, RPA, CHGO, NF.
 - Yeniden üretilecek deneyler: Şek. 9 (gecikme – yoğunluk), Şek. 11 (tamamlama oranı – yoğunluk), Şek. 12 (tamamlama oranı – hız).

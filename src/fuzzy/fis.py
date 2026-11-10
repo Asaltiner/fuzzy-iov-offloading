@@ -9,7 +9,7 @@ Makalede edge dugumu, kuyruktaki gorevleri hiz, mesafe, gorev boyutu ve gorev
 onceligine gore bulanik mantikla puanlar; yuksek puanli gorev once calistirilir.
 
 Bu modul FIS'i NumPy ile sifirdan uygular (scikit-fuzzy yalnizca dogrulama testinde
-kullanilir). Sebep: simulasyonda FIS binlerce kez cagrilacak ve 4. gunde Genetik
+kullanilir). Sebep: simulasyonda FIS binlerce kez cagrilacak ve ileride Genetik
 Algoritma uyelik fonksiyonu parametrelerini degistirecek; parametrik ve vektorlu
 bir uygulama hem hizli hem de GA'ya uygundur.
 
