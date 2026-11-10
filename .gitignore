@@ -1,0 +1,13 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db
+.env
+*.log
+
+# Kisisel notlar (GitHub'a gitmez)
+notlar/
