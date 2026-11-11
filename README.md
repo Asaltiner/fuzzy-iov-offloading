@@ -46,13 +46,30 @@ Python ≥ 3.10. Gerekli paketler `requirements.txt` dosyasında.
 
 ## How to Run
 ```bash
-python -m src.fuzzy.fis          # FIS'i örnek girdilerle çalıştır, kuralları yazdır
-python -m src.fuzzy.plot_fis     # MF ve kontrol yüzeyi grafiklerini üret
-python -m pytest -q              # testler (scikit-fuzzy ile doğrulama dahil)
+python -m src.fuzzy.fis                                   # FIS'i örnek girdilerle çalıştır, kuralları yazdır
+python -m src.fuzzy.plot_fis                              # MF ve kontrol yüzeyi grafiklerini üret
+python -m pytest -q                                       # 26 test (scikit-fuzzy doğrulaması + simülatör)
+python -m experiments.baseline.cp3_first_results          # tek senaryo, 6 yöntem, 10 seed (~10 s)
+python -m experiments.baseline.run_sweep --exp density --reps 30   # E1: Şek. 9 ve 11
+python -m experiments.baseline.run_sweep --exp speed   --reps 30   # E2: Şek. 12
+```
+Tek bir koşu Python içinden:
+```python
+from src.sim import SimConfig, run_simulation
+run_simulation("FUZZY", SimConfig(density=200, mean_speed=30), seed=1)
 ```
 
 ## Reproduction Experiments
-Referans makaledeki şu deneyler yeniden üretilecektir: ortalama gecikme ve görev tamamlama oranının araç yoğunluğuna göre değişimi (Şek. 9, 11), tamamlama oranının araç hızına göre değişimi (Şek. 12).
+Python'da yazılmış, seed kontrollü ayrık zamanlı bir simülatör kullanılıyor (`src/sim/`). İçerik: iki yönlü halka otoyol, 250 m V2V menzili, Nakagami-m kanal (Denk. 1–2), beacon tabanlı edge seçimi (Denk. 3–9), EN'de bulanık öncelik kuyruğu. Karşılaştırılan yöntemler: LPA, RPA, CHGO, NF, FUZZY ve ablation için FUZZY_FIFO. Tasarım ve varsayımlar: [`docs/04_gun2_simulator.md`](docs/04_gun2_simulator.md).
+
+| Deney | Değişken | Makale |
+|---|---|---|
+| E1 | yoğunluk 50–350 araç/km | Şek. 9 (gecikme), Şek. 11 (tamamlama) |
+| E2 | ortalama hız 10–50 m/s | Şek. 12 (tamamlama) |
+
+**İlk sonuçlar** (150 araç/km, 30 m/s, 10 seed): FUZZY tamamlama oranı 0,951 ± 0,006. En iyi baseline NF: 0,697 ± 0,015.
+
+![CP3](results/figures/cp3_completion.png)
 
 ## Proposed Extension
 Üyelik fonksiyonlarının Genetik Algoritma ile optimizasyonu (GA-FIS), gürültü/robustness analizi ve durulaştırma ablation'ı.
@@ -60,6 +77,7 @@ Referans makaledeki şu deneyler yeniden üretilecektir: ortalama gecikme ve gö
 ## Repository Structure
 ```
 src/fuzzy/            Bulanık çıkarım sistemi (fis.py) ve grafikler
+src/sim/              IoV simülatörü: hareket, kanal, görevler, yöntemler, deney yardımcıları
 experiments/          baseline/ ve proposed/ deney betikleri
 results/figures|tables  Üretilen grafikler ve CSV sonuçlar
 docs/                 Makale analizi, literatür ve uygulama planı

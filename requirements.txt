@@ -6,3 +6,4 @@ scikit-fuzzy>=0.4.2
 networkx>=3.0
 pytest>=7.0
 streamlit>=1.30
+tabulate>=0.9
