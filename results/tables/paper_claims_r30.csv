@@ -1,0 +1,9 @@
+iddia,kaynak,bizim sonuç,uyumlu
+Önerilen yöntem tüm yoğunluklarda en düşük gecikme,Şek. 9,7/7 noktada 1.,True
+Önerilen yöntem tüm yoğunluk ve hızlarda en yüksek tamamlama,Şek. 11–12,12/12 noktada 1.,True
+Yoğunluk ↑ → gecikme ↑,Şek. 9,"anlamlı artış (ρ>0, p<0,05): RPA, CHGO, NF, FUZZY",True
+CHGO hıza karşı tutarlı,Şek. 12,"CHGO ρ(hız, tamamlama) = -0.96",False
+CHGO yoğun ağda zayıf,Şek. 11,"CHGO ρ(yoğunluk, tamamlama) = -0.99",True
+NF yoğun bölgelerde güçlü/kararlı,Şek. 11,"|Δ tamamlama| 50→350: RPA 0.083, CHGO 0.250, NF 0.022",True
+LPA en kötü yöntem,Şek. 11–12,LPA 0/12 noktada son; en kötü: {'RPA': 12},False
+Yüksek yoğunlukta RPA > LPA,Şek. 11,"350 araç/km: RPA 0.251, LPA 0.584",False

@@ -48,10 +48,13 @@ Python ≥ 3.10. Gerekli paketler `requirements.txt` dosyasında.
 ```bash
 python -m src.fuzzy.fis                                   # FIS'i örnek girdilerle çalıştır, kuralları yazdır
 python -m src.fuzzy.plot_fis                              # MF ve kontrol yüzeyi grafiklerini üret
-python -m pytest -q                                       # 26 test (scikit-fuzzy doğrulaması + simülatör)
+python -m pytest -q                                       # 34 test (FIS doğrulaması, simülatör, GA)
 python -m experiments.baseline.cp3_first_results          # tek senaryo, 6 yöntem, 10 seed (~10 s)
 python -m experiments.baseline.run_sweep --exp density --reps 30   # E1: Şek. 9 ve 11
 python -m experiments.baseline.run_sweep --exp speed   --reps 30   # E2: Şek. 12
+python -m experiments.baseline.compare_with_paper --reps 30        # makaleyle karşılaştırma tabloları
+python -m src.fuzzy.ga_tuning --pop 16 --gens 12 --tag ga_pilot    # GA-FIS (MF optimizasyonu)
+python -m experiments.proposed.ga_pilot_holdout --tag ga_pilot     # GA-FIS'i test seed'lerinde kontrol et
 ```
 Tek bir koşu Python içinden:
 ```python
@@ -71,8 +74,14 @@ Python'da yazılmış, seed kontrollü ayrık zamanlı bir simülatör kullanıl
 
 ![CP3](results/figures/cp3_completion.png)
 
+**30 tekrarlı sonuçlar:** FUZZY 19 noktanın hepsinde en iyi yöntem. En iyi baseline (NF) ile fark eşleştirilmiş Wilcoxon testinde anlamlı (p ≤ 1,7·10⁻⁶). Makaledeki 8 nitel iddianın 5'i tutuyor. Ayrıntılar: [`docs/05_gun3_cp4.md`](docs/05_gun3_cp4.md), [`results/tables/paper_comparison_r30.md`](results/tables/paper_comparison_r30.md).
+
+![E1](results/figures/e1_density_completion_rate_r30.png)
+
 ## Proposed Extension
-Üyelik fonksiyonlarının Genetik Algoritma ile optimizasyonu (GA-FIS), gürültü/robustness analizi ve durulaştırma ablation'ı.
+**GA-FIS:** 4 girdinin MF kırılma noktaları (16 gen) Genetik Algoritma ile optimize ediliyor (`src/fuzzy/ga_tuning.py`). Kural tabanı, çıkarım ve durulaştırma değişmiyor. Uygunluk ölçütü: tamamlama + 0,5·acil tamamlama − 0,2·normalize gecikme. Eğitim için normal ve yüksek yük senaryoları, ayrı eğitim seed'leri (101–103) kullanılıyor. Test seed'leri (1–30) GA tarafından hiç görülmüyor. Ek deneyler: gürültü/robustness analizi, durulaştırma ve Mamdani/Sugeno ablation'ı. Katkı önerisi (CP4): [`docs/05_gun3_cp4.md`](docs/05_gun3_cp4.md).
+
+![GA-FIS MF](results/figures/ga_pilot_mf.png)
 
 ## Repository Structure
 ```
