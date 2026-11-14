@@ -46,6 +46,8 @@ class Simulation:
         self.tasks = generate_tasks(cfg, self.n, r_task)
         self.rng_ch = r_ch
         self.rng_dec = r_dec
+        # Olcum gurultusu icin ayri akis: diger akislari (hareket, gorev, kanal) degistirmez
+        self.rng_noise = np.random.default_rng([seed, 7])
         self.fis = fis if fis is not None else FuzzyPrioritySystem()
         self.policy = make_policy(method, self)
         self.t = 0.0
@@ -67,6 +69,14 @@ class Simulation:
         busy = np.maximum(self.busy_until - self.t, 0.0) * (self.busy_task >= 0)
         w = self.queued_mi / self.mips + busy
         return w if idx is None else w[idx]
+
+    def noisy(self, x: np.ndarray) -> np.ndarray:
+        """Beacon'dan okunan bulanik girdiye olcum gurultusu ekle (cfg.input_noise > 0 ise)."""
+        s = self.cfg.input_noise
+        if s <= 0:
+            return x
+        x = np.asarray(x, dtype=float)
+        return np.maximum(x * (1.0 + self.rng_noise.normal(0.0, s, x.shape)), 0.0)
 
     # ---------- kuyruk islemleri ----------
     def _enqueue(self, j: int, task: int, t: float) -> None:
@@ -108,8 +118,8 @@ class Simulation:
         T = self.tasks
         idx = np.asarray(q)
         origins = T.origin[idx]
-        dist = self.hw.dist(j, origins)
-        rel_v = self.hw.rel_speed(j, origins)
+        dist = self.noisy(self.hw.dist(j, origins))
+        rel_v = self.noisy(self.hw.rel_speed(j, origins))
         t0 = time.perf_counter()
         score = self.fis.evaluate(dist, rel_v, T.size[idx], T.priority[idx])
         self.fis_time += time.perf_counter() - t0

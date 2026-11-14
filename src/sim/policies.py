@@ -125,8 +125,8 @@ class FuzzySelect(Policy):
         s = self.sim
         T = s.tasks
         i = T.origin[task]
-        mu_d = self.fis.fuzzify("distance", d)
-        mu_v = self.fis.fuzzify("speed", s.hw.rel_speed(i, nb))
+        mu_d = self.fis.fuzzify("distance", s.noisy(d))
+        mu_v = self.fis.fuzzify("speed", s.noisy(s.hw.rel_speed(i, nb)))
         mf_dist = mu_d[:, 0] + 0.5 * mu_d[:, 1]
         mf_speed = mu_v[:, 0] + 0.5 * mu_v[:, 1]
         mf_cpu = np.array([self.cpu_mf[m] for m in s.mips[nb]])

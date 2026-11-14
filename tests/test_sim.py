@@ -112,3 +112,18 @@ def test_fuzzy_queue_prefers_urgent_task():
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))
+
+
+def test_zero_noise_is_identical_and_noise_changes_only_fuzzy():
+    """input_noise=0 baseline'i degistirmez; gurultu yalniz bulanik yontemleri etkiler."""
+    from src.sim import SimConfig, run_simulation
+    cfg = SimConfig(density=80.0, sim_time=60.0, warmup=5.0, tail=10.0)
+    keys = ("completion_rate", "avg_delay", "n_tasks")
+    a = run_simulation("FUZZY", cfg, seed=3)
+    b = run_simulation("FUZZY", cfg.with_(input_noise=0.0), seed=3)
+    assert all(a[k] == b[k] for k in keys)
+    n1 = run_simulation("NF", cfg, seed=3)
+    n2 = run_simulation("NF", cfg.with_(input_noise=0.3), seed=3)
+    assert all(n1[k] == n2[k] for k in keys)
+    c = run_simulation("FUZZY", cfg.with_(input_noise=0.3), seed=3)
+    assert c["n_tasks"] == a["n_tasks"]

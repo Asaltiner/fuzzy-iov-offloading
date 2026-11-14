@@ -56,6 +56,9 @@ class SimConfig:
     # ---------- Yontem parametreleri ----------
     chgo_update: float = 1.0          # s, CHGO merkezi durum guncelleme periyodu - VARSAYIM
     nf_max_wait: float = 2.0          # s, NF'de "kapasite uygun" esigi - VARSAYIM
+    # Gun 4 robustness: bulanik girdilere (mesafe, bagil hiz) carpimsal Gauss olcum
+    # gurultusu, x_olculen = x * (1 + N(0, input_noise)). 0 = gurultusuz (baseline).
+    input_noise: float = 0.0
     selection_weights: dict = field(default_factory=lambda: {
         # Denk. 5-9: w_x = I_x / sum(I). Onem skorlari makalede yok -> esit - VARSAYIM
         "distance": 1.0, "speed": 1.0, "cpu": 1.0, "load": 1.0,

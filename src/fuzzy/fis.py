@@ -84,8 +84,18 @@ class FuzzyPrioritySystem:
 
     breakpoints: dict[str, np.ndarray] = field(default_factory=default_breakpoints)
     resolution: int = 201  # cikti evreninin ornek sayisi (centroid hassasiyeti)
+    # Gun 4 ablation secenekleri (varsayilanlar elle tasarlanmis baseline FIS'tir):
+    #   inference: "mamdani" (min/max + durulastirma) | "sugeno" (sifirinci derece, sabit
+    #              cikti = terim tepesi 0/25/50/75/100, kural atesleme gucuyle agirlikli ort.)
+    #   defuzz   : "centroid" | "bisector" | "mom" (maksimumlarin ortalamasi) - yalniz Mamdani
+    inference: str = "mamdani"
+    defuzz: str = "centroid"
 
     def __post_init__(self) -> None:
+        if self.inference not in ("mamdani", "sugeno"):
+            raise ValueError(f"inference: {self.inference}")
+        if self.defuzz not in ("centroid", "bisector", "mom"):
+            raise ValueError(f"defuzz: {self.defuzz}")
         self.y = np.linspace(*OUT_UNIVERSE, self.resolution)
         step = (OUT_UNIVERSE[1] - OUT_UNIVERSE[0]) / (len(OUT_TERMS) - 1)
         # Cikti MF'leri: tepeleri 0,25,50,75,100 olan ucgenler -> (5, resolution)
@@ -141,6 +151,11 @@ class FuzzyPrioritySystem:
         mu = [self.fuzzify(n, x) for n, x in zip(INPUTS, xs)]          # 4 x (N, 3)
         # Kural atesleme gucu: VE = min  -> (N, 81)
         firing = np.min(np.stack([m[:, self.rules[:, i]] for i, m in enumerate(mu)]), axis=0)
+        if self.inference == "sugeno":
+            # Sifirinci derece Sugeno: z_r = cikti teriminin tepe degeri
+            z = self.rule_out * (OUT_UNIVERSE[1] - OUT_UNIVERSE[0]) / (len(OUT_TERMS) - 1)
+            den = firing.sum(axis=1)
+            return np.where(den > 0, firing @ z / np.where(den > 0, den, 1), 50.0)
         # Her cikti terimi icin en guclu kural (birlestirme = max) -> (N, 5)
         alpha = np.zeros((firing.shape[0], len(OUT_TERMS)))
         for k in range(len(OUT_TERMS)):
@@ -149,10 +164,40 @@ class FuzzyPrioritySystem:
                 alpha[:, k] = firing[:, sel].max(axis=1)
         # Implikasyon = min, birlestirme = max -> (N, resolution)
         agg = np.max(np.minimum(alpha[:, :, None], self.out_mf[None, :, :]), axis=1)
+        return self.defuzzify(agg)
+
+    def defuzzify(self, agg: np.ndarray) -> np.ndarray:
+        """Birlesik cikti kumesi (N, resolution) -> keskin skor (N,)."""
         den = agg.sum(axis=1)
-        num = (agg * self.y).sum(axis=1)
+        ok = den > 0
+        if self.defuzz == "centroid":
+            out = (agg * self.y).sum(axis=1) / np.where(ok, den, 1)
+        elif self.defuzz == "bisector":
+            # Alani iki esit parcaya bolen nokta (ayrik yaklasim, skfuzzy ile uyumlu)
+            cum = np.cumsum(agg, axis=1)
+            idx = np.argmax(cum >= 0.5 * den[:, None], axis=1)
+            out = self.y[idx]
+        else:  # mom
+            mx = agg.max(axis=1, keepdims=True)
+            at = np.isclose(agg, mx) & (mx > 0)
+            out = (at * self.y).sum(axis=1) / np.maximum(at.sum(axis=1), 1)
         # Hicbir kural atesmezse (olmamali, kural tabani tam) orta deger
-        return np.where(den > 0, num / np.where(den > 0, den, 1), 50.0)
+        return np.where(ok, out, 50.0)
+
+    def explain(self, distance, speed, size, priority) -> dict:
+        """Tek bir girdi icin ara adimlar (demo ve savunma icin).
+
+        Donus: uyelik dereceleri, kural atesleme gucleri, cikti terimi aktivasyonlari,
+        birlesik cikti kumesi (Mamdani) ve keskin skor.
+        """
+        x = dict(zip(INPUTS, (distance, speed, size, priority)))
+        mu = {n: self.fuzzify(n, np.array([x[n]]))[0] for n in INPUTS}
+        firing = np.min(np.stack([mu[n][self.rules[:, i]] for i, n in enumerate(INPUTS)]), axis=0)
+        alpha = np.array([firing[self.rule_out == k].max() if (self.rule_out == k).any() else 0.0
+                          for k in range(len(OUT_TERMS))])
+        agg = np.max(np.minimum(alpha[:, None], self.out_mf), axis=0)
+        return {"membership": mu, "firing": firing, "alpha": alpha, "aggregated": agg,
+                "score": self.score(distance, speed, size, priority)}
 
     def score(self, distance, speed, size, priority) -> float:
         return float(self.evaluate(distance, speed, size, priority)[0])

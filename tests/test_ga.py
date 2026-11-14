@@ -78,3 +78,14 @@ def test_tiny_ga_run_is_reproducible_and_elitist():
     best = [h["best"] for h in r1.history]
     assert all(b2 >= b1 - 1e-12 for b1, b2 in zip(best, best[1:]))    # elitizm: monoton
     assert best[-1] >= r1.history[0]["baseline"] - 1e-12                # seeding: baseline'dan kotu degil
+
+
+def test_adaptive_mutation_raises_sigma_on_stall():
+    """Uyarlanabilir mutasyon: en iyi uygunluk iyilesmezse sigma artar, ust siniri asmaz."""
+    cfg = GAConfig(pop_size=4, generations=6, adaptive=True, stall_gens=1, sigma_up=2.0, sigma_max=0.2)
+    t = GeneticTuner(cfg, workers=1, scenarios={})
+    t.evaluate = lambda pop: np.zeros(len(pop))        # duz uygunluk yuzeyi -> hep durgun
+    t.cache[t._key(default_genome())] = {"fitness": 0.0}
+    t.run(log=lambda *_: None)
+    sig = [h["sigma"] for h in t.history]
+    assert sig[0] == cfg.mut_sigma and max(sig) == 0.2 and all(b >= a for a, b in zip(sig, sig[1:]))

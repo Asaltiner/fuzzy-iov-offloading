@@ -38,7 +38,9 @@ FIS de eklenir (seeding): GA en kotu ihtimalle baseline'i korur.
 
 Kullanim:
   python -m src.fuzzy.ga_tuning --smoke                 # ~1 dk, kod kontrolu
-  python -m src.fuzzy.ga_tuning --pop 16 --gens 12      # Gun 4 tam kosu
+  python -m src.fuzzy.ga_tuning --pop 16 --gens 12 --tag ga_pilot   # Gun 3 pilot
+  python -m src.fuzzy.ga_tuning --pop 24 --gens 20 --seeds 101 102 103 104 105 \
+         --adaptive --ga-seed 1 --tag ga_full_s1                      # Gun 4 tam kosu
 Ciktilar: results/ga/<tag>_history.csv, <tag>_best.json, results/figures/<tag>_*.png
 """
 from __future__ import annotations
@@ -143,6 +145,12 @@ class GAConfig:
     sim_time: float = 200.0
     method: str = "FUZZY"
     seed: int = 2026                          # GA'nin kendi rastgeleligi
+    # Uyarlanabilir mutasyon (Gun 4): en iyi birey `stall_gens` nesil iyilesmezse
+    # sigma `sigma_up` katina cikar (en fazla `sigma_max`); iyilesince taban degere doner.
+    adaptive: bool = False
+    stall_gens: int = 3
+    sigma_up: float = 1.5
+    sigma_max: float = 0.25
     weights: FitnessWeights = field(default_factory=FitnessWeights)
 
 
@@ -155,6 +163,7 @@ class GeneticTuner:
         self.cache: dict[tuple, dict] = {}
         self.history: list[dict] = []
         self.n_sims = 0
+        self.sigma = cfg.mut_sigma
 
     # ---- toplu degerlendirme (paralel, onbellekli)
     @staticmethod
@@ -218,7 +227,7 @@ class GeneticTuner:
     def _mutate(self, g):
         m = self.rng.random(N_GENES) < self.cfg.mut_prob
         g = g.copy()
-        g[m] += self.rng.normal(0.0, self.cfg.mut_sigma, m.sum())
+        g[m] += self.rng.normal(0.0, self.sigma, m.sum())
         return repair(g)
 
     def initial_population(self) -> list[np.ndarray]:
@@ -233,17 +242,27 @@ class GeneticTuner:
         pop = self.initial_population()
         t0 = time.time()
         base_key = self._key(default_genome())
+        best_so_far, stall = -np.inf, 0
         for gen in range(c.generations + 1):
             fit = self.evaluate(pop)
             order = np.argsort(-fit)
             best = pop[order[0]]
+            if fit[order[0]] > best_so_far + 1e-9:
+                best_so_far, stall = float(fit[order[0]]), 0
+                self.sigma = c.mut_sigma
+            else:
+                stall += 1
+                if c.adaptive and stall >= c.stall_gens:
+                    self.sigma = min(self.sigma * c.sigma_up, c.sigma_max)
             rec = {"generation": gen, "best": float(fit[order[0]]), "mean": float(fit.mean()),
                    "std": float(fit.std()), "baseline": self.cache[base_key]["fitness"],
                    "n_sims": self.n_sims, "elapsed_s": time.time() - t0,
+                   "sigma": self.sigma,
                    "best_genome": json.dumps([round(x, 4) for x in repair(best)])}
             self.history.append(rec)
             log(f"nesil {gen:2d}  en iyi {rec['best']:.4f}  ort {rec['mean']:.4f}  "
-                f"baseline {rec['baseline']:.4f}  ({rec['elapsed_s']:.0f} s, {self.n_sims} sim)")
+                f"baseline {rec['baseline']:.4f}  sigma {self.sigma:.3f}  "
+                f"({rec['elapsed_s']:.0f} s, {self.n_sims} sim)")
             if gen == c.generations:
                 break
             P = np.array(pop)
@@ -322,13 +341,18 @@ def main():
     ap.add_argument("--sim-time", type=float, default=200.0)
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--ga-seed", type=int, default=2026, help="GA'nin kendi rastgelelik seed'i")
+    ap.add_argument("--adaptive", action="store_true", help="uyarlanabilir mutasyon")
     ap.add_argument("--smoke", action="store_true", help="kucuk ayarlarla hizli kontrol")
     a = ap.parse_args()
+    import functools
+    global print
+    print = functools.partial(print, flush=True)  # noqa: A001  arka plan loglari icin
     if a.smoke:
         a.pop, a.gens, a.seeds, a.sim_time = 6, 2, [101], 80.0
     tag = a.tag or ("ga_smoke" if a.smoke else f"ga_p{a.pop}_g{a.gens}")
     cfg = GAConfig(pop_size=a.pop, generations=a.gens, train_seeds=tuple(a.seeds),
-                   sim_time=a.sim_time)
+                   sim_time=a.sim_time, seed=a.ga_seed, adaptive=a.adaptive)
     tuner = GeneticTuner(cfg, workers=a.workers)
     out = tuner.run()
     gdir = os.path.join(ROOT, "results", "ga")
