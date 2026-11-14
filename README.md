@@ -48,13 +48,19 @@ Python ≥ 3.10. Gerekli paketler `requirements.txt` dosyasında.
 ```bash
 python -m src.fuzzy.fis                                   # FIS'i örnek girdilerle çalıştır, kuralları yazdır
 python -m src.fuzzy.plot_fis                              # MF ve kontrol yüzeyi grafiklerini üret
-python -m pytest -q                                       # 34 test (FIS doğrulaması, simülatör, GA)
+python -m pytest -q                                       # 40 test (FIS doğrulaması, simülatör, GA)
 python -m experiments.baseline.cp3_first_results          # tek senaryo, 6 yöntem, 10 seed (~10 s)
 python -m experiments.baseline.run_sweep --exp density --reps 30   # E1: Şek. 9 ve 11
 python -m experiments.baseline.run_sweep --exp speed   --reps 30   # E2: Şek. 12
 python -m experiments.baseline.compare_with_paper --reps 30        # makaleyle karşılaştırma tabloları
 python -m src.fuzzy.ga_tuning --pop 16 --gens 12 --tag ga_pilot    # GA-FIS (MF optimizasyonu)
 python -m experiments.proposed.ga_pilot_holdout --tag ga_pilot     # GA-FIS'i test seed'lerinde kontrol et
+# Gün 4 (CP5): tam GA (her GA seed'i ~12 dk) ve karşılaştırmalar
+python -m src.fuzzy.ga_tuning --pop 24 --gens 20 --seeds 101 102 103 104 105 --adaptive --ga-seed 1 --tag ga_full_s1
+python -m experiments.proposed.ga_evaluate         # doğrulama ile seçim + test seed'leri 1–30, ~8 dk
+python -m experiments.proposed.robustness          # girdi gürültüsü, ~4 dk
+python -m experiments.proposed.ablation            # durulaştırma, Sugeno, FIFO kuyruk, FIS süresi, ~3 dk
+streamlit run app.py                               # canlı demo
 ```
 Tek bir koşu Python içinden:
 ```python
@@ -79,9 +85,49 @@ Python'da yazılmış, seed kontrollü ayrık zamanlı bir simülatör kullanıl
 ![E1](results/figures/e1_density_completion_rate_r30.png)
 
 ## Proposed Extension
-**GA-FIS:** 4 girdinin MF kırılma noktaları (16 gen) Genetik Algoritma ile optimize ediliyor (`src/fuzzy/ga_tuning.py`). Kural tabanı, çıkarım ve durulaştırma değişmiyor. Uygunluk ölçütü: tamamlama + 0,5·acil tamamlama − 0,2·normalize gecikme. Eğitim için normal ve yüksek yük senaryoları, ayrı eğitim seed'leri (101–103) kullanılıyor. Test seed'leri (1–30) GA tarafından hiç görülmüyor. Ek deneyler: gürültü/robustness analizi, durulaştırma ve Mamdani/Sugeno ablation'ı. Katkı önerisi (CP4): [`docs/05_gun3_cp4.md`](docs/05_gun3_cp4.md).
+**GA-FIS:** 4 girdinin MF kırılma noktaları (16 gen) Genetik Algoritma ile optimize ediliyor (`src/fuzzy/ga_tuning.py`). Kural tabanı, çıkarım ve durulaştırma değişmiyor; böylece fark yalnızca MF şekline atfedilebiliyor.
+- **Uygunluk:** tamamlama + 0,5·acil tamamlama − 0,2·normalize gecikme. Normal ve yüksek yük senaryolarının ortalaması.
+- **GA:** 24 birey × 20 nesil, turnuva seçimi, BLX-α, uyarlanabilir Gauss mutasyonu, elitizm, elle FIS ile seeding. 3 bağımsız GA seed'i.
+- **Veri ayrımı:** eğitim seed'leri 101–105 → GA seed'i seçimi doğrulama seed'leri 201–210 ile → karşılaştırma test seed'leri 1–30 ile (eşleştirilmiş Wilcoxon, Holm düzeltmesi).
+- **Ek deneyler:** girdi gürültüsü (robustness), durulaştırma ve Mamdani/Sugeno ablation'ı, bulanık kuyruğun kapatılması, FIS hesaplama süresi.
 
-![GA-FIS MF](results/figures/ga_pilot_mf.png)
+Katkı önerisi (CP4): [`docs/05_gun3_cp4.md`](docs/05_gun3_cp4.md). Sonuçlar (CP5): [`docs/06_gun4_cp5.md`](docs/06_gun4_cp5.md).
+
+![GA-FIS MF](results/figures/ga_full_mf.png)
+
+## Experimental Results
+**Elle FIS (baseline) ve GA-FIS, test seed'leri 1–30:**
+
+| Senaryo | Ölçüt | Elle FIS | GA-FIS | Değişim | p (Holm) |
+|---|---|---|---|---|---|
+| Yüksek yük (100 araç/km, 0,035 görev/s) | Tamamlama oranı | 0,856 | 0,870 | +0,014 | 5·10⁻⁸ |
+| | Acil görev tamamlama | 0,784 | 0,796 | +0,012 | 0,008 |
+| | Gecikme (s) | 7,58 | 7,65 | +0,07 (kötü) | 6·10⁻⁹ |
+| Normal yük (150 araç/km, 0,015 görev/s) | Tamamlama oranı | 0,948 | 0,952 | +0,004 | 0,019 |
+| | Acil görev tamamlama | 0,914 | 0,920 | +0,006 | 0,023 |
+| | Gecikme (s) | 6,35 | 6,62 | +0,27 (kötü) | 4·10⁻⁹ |
+| 350 araç/km | Tamamlama oranı | – | – | +0,027 | 1·10⁻⁸ |
+
+- GA-FIS'in kazancı yoğunluk ve yük arttıkça büyüyor. Bedeli, tamamlanan görevlerde biraz daha uzun gecikme.
+- %30'a kadar girdi gürültüsünde iki FIS de neredeyse hiç bozulmuyor; GA-FIS'in üstünlüğü korunuyor.
+- Durulaştırma yöntemi ve Mamdani/Sugeno seçimi sonucu değiştirmiyor. Bulanık kuyruğu kapatmak acil görevleri yüksek yükte −0,037 düşürüyor.
+- FIS görev başına ~0,13 ms (NumPy). Aynı sistem scikit-fuzzy ile ~35 ms.
+
+Tablolar: [`results/tables/ga_test_summary.md`](results/tables/ga_test_summary.md), [`robustness_summary.md`](results/tables/robustness_summary.md), [`ablation_summary.md`](results/tables/ablation_summary.md).
+
+![Yoğunluğa göre kazanç](results/figures/ga_test_density_diff.png)
+
+## Live Demo
+```bash
+streamlit run app.py
+```
+Girdi kaydırıcılarıyla canlı bulanık çıkarım (üyelik dereceleri, ateşlenen kurallar, durulaştırma), kontrol yüzeyi, istenen koşullarda mini simülasyon ve deney sonuçları.
+
+## Limitations
+- Makale MF parametrelerini, kural tabanını ve baseline ayrıntılarını vermediği için bunlar varsayım. Veins/SUMO yerine kendi Python simülatörümüz kullanıldı.
+- GA yalnızca girdi MF'lerini ayarlıyor; kural tabanı ve çıktı MF'leri sabit. Fitness tek amaçlı ve ağırlıkları elle seçildi.
+- GA-FIS'te gecikmenin artmasının nedeni (uzak düğüm seçimi) hipotez düzeyinde.
+- Ayrıntılar: [`docs/06_gun4_cp5.md`](docs/06_gun4_cp5.md) §9.
 
 ## Repository Structure
 ```
@@ -89,7 +135,8 @@ src/fuzzy/            Bulanık çıkarım sistemi (fis.py) ve grafikler
 src/sim/              IoV simülatörü: hareket, kanal, görevler, yöntemler, deney yardımcıları
 experiments/          baseline/ ve proposed/ deney betikleri
 results/figures|tables  Üretilen grafikler ve CSV sonuçlar
-docs/                 Makale analizi, literatür ve uygulama planı
+docs/                 Makale analizi, literatür, uygulama planı ve checkpoint belgeleri (01–06)
+app.py                Streamlit canlı demo
 report/ presentation/ Rapor ve sunum PDF'leri
 references/           Kaynak listesi
 tests/                Birim testleri
